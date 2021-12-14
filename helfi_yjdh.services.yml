@@ -3,8 +3,6 @@ services:
     class: Drupal\helfi_yjdh\YjdhClient
     arguments: ['@http_client']
 
-
-
   logger.helfi_yjdh:
     class: Drupal\helfi_yjdh\Logger\YjdhLogger
     arguments: ['@config.factory', '@logger.log_message_parser', '@date.formatter']
