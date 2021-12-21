@@ -58,22 +58,22 @@ class YjdhLogger implements LoggerInterface {
    */
   public function log($level, $message, array $context = []) {
 
-    // Populate the message placeholders and then replace them in the message.
-    $message_placeholders = $this->parser->parseMessagePlaceholders($message, $context);
-    $message = empty($message_placeholders) ? $message : strtr($message, $message_placeholders);
-
-    $entry = [
-      'message' => strip_tags($message),
-      'date' => $this->dateFormatter->format($context['timestamp']),
-      'type' => $context['channel'],
-      'ip' => $context['ip'],
-      'request_uri' => $context['request_uri'],
-      'referer' => $context['referer'],
-      'severity' => (string) RfcLogLevel::getLevels()[$level],
-      'uid' => $context['uid'],
-    ];
-
-    file_put_contents('temporary://drupal.log', print_r($entry, TRUE), FILE_APPEND);
+//    // Populate the message placeholders and then replace them in the message.
+//    $message_placeholders = $this->parser->parseMessagePlaceholders($message, $context);
+//    $message = empty($message_placeholders) ? $message : strtr($message, $message_placeholders);
+//
+//    $entry = [
+//      'message' => strip_tags($message),
+//      'date' => $this->dateFormatter->format($context['timestamp']),
+//      'type' => $context['channel'],
+//      'ip' => $context['ip'],
+//      'request_uri' => $context['request_uri'],
+//      'referer' => $context['referer'],
+//      'severity' => (string) RfcLogLevel::getLevels()[$level],
+//      'uid' => $context['uid'],
+//    ];
+//
+//    file_put_contents('temporary://drupal.log', print_r($entry, TRUE), FILE_APPEND);
   }
 
 }
