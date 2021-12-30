@@ -271,7 +271,10 @@ class YjdhClient {
       $data = $this->request(
         $body,
         $endpoint);
-      $this->setToCache($endpoint, $ssn, $data['response']);
+      if(isset($data['response'])) {
+        $this->setToCache($endpoint, $ssn, $data['response']);
+      }
+
       return ($data['response']);
     } catch (GuzzleException|YjdhException $e) {
       $this->logger->error('YJDH error: ' . $e->getMessage());
@@ -336,6 +339,7 @@ class YjdhClient {
     catch (\Throwable $e) {
       $this->logger->error($e->getMessage());
     }
+    return [];
   }
 
   /**
