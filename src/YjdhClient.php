@@ -3,8 +3,14 @@
 namespace Drupal\helfi_yjdh;
 
 use Drupal\Component\Serialization\Json;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Logger\LoggerChannelInterface;
+use Drupal\Core\TempStore\PrivateTempStore;
+use Drupal\Core\TempStore\PrivateTempStoreFactory;
 use Drupal\helfi_yjdh\Exception\YjdhException;
 use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
+use JetBrains\PhpStorm\ArrayShape;
 
 /**
  * Service to use YJDH services.
@@ -70,13 +76,34 @@ class YjdhClient {
   protected array $responseCache;
 
   /**
+   * The logger channel factory.
+   *
+   * @var LoggerChannelInterface
+   */
+  protected LoggerChannelInterface $logger;
+
+  /**
+   * Access to session storage.
+   *
+   * @var \Drupal\Core\TempStore\PrivateTempStore
+   */
+  protected PrivateTempStore $tempStore;
+
+  /**
    * Constructs a YjdhClient object.
    *
    * @param \GuzzleHttp\ClientInterface $http_client
    *   The HTTP client.
    */
-  public function __construct(ClientInterface $http_client) {
+  public function __construct(
+    ClientInterface $http_client,
+    LoggerChannelFactoryInterface $logger_factory,
+    PrivateTempStoreFactory $tempstore
+  ) {
     $this->httpClient = $http_client;
+    $this->logger = $logger_factory->get('yjdh_client');
+    $this->tempStore = $tempstore->get('yjdh_client');
+
     $this->yrttiAuth = [
       getenv('YRTTI_USERNAME'),
       getenv('YRTTI_PASSWD'),
@@ -155,11 +182,13 @@ class YjdhClient {
    *   Endpoint url.
    * @param string $key
    *   Used key for caching.
-   * @param array $data
+   * @param array|null $data
    *   Cached data.
    */
-  private function setToCache(string $endpoint, string $key, array $data) {
-    $this->responseCache[$endpoint][$key] = $data;
+  private function setToCache(string $endpoint, string $key, ?array $data) {
+    if (is_array($data)) {
+      $this->responseCache[$endpoint][$key] = $data;
+    }
   }
 
   /**
@@ -173,7 +202,6 @@ class YjdhClient {
    * @return array
    *   Response data
    *
-   * @throws \Drupal\helfi_yjdh\Exception\YjdhException
    */
   public function getAssociationBasicInfo(string $businessId, string $endpoint = '/api/BasicInfo'): array {
 
@@ -199,12 +227,11 @@ class YjdhClient {
    * @param string $endpoint
    *   Endpoint to be called. Default works fine.
    *
-   * @return array
+   * @return array|null
    *   Response data
    *
-   * @throws \Drupal\helfi_yjdh\Exception\YjdhException
    */
-  public function getCompany(string $businessId, string $endpoint = '/api/GetCompany'): array {
+  public function getCompany(string $businessId, string $endpoint = '/api/GetCompany'): ?array {
 
     if ($this->isCached($endpoint, $businessId)) {
       return $this->getFromCache($endpoint, $businessId);
@@ -215,6 +242,9 @@ class YjdhClient {
     ];
 
     $data = $this->request($body, $endpoint);
+    if (empty($data)) {
+      return NULL;
+    }
     $this->setToCache($endpoint, $businessId, $data['response']);
 
     return ($data['response']);
@@ -231,7 +261,6 @@ class YjdhClient {
    * @return array
    *   Response data
    *
-   * @throws \Drupal\helfi_yjdh\Exception\YjdhException
    */
   public function roleSearchWithSsn(string $ssn, string $endpoint = '/api/RoleSearchWithSSN'): array {
     if ($this->isCached($endpoint, $ssn)) {
@@ -242,13 +271,19 @@ class YjdhClient {
       'PersonalIdentityCode' => $ssn,
     ];
 
-    $data = $this->request(
-      $body,
-      $endpoint);
+    try {
+      $data = $this->request(
+        $body,
+        $endpoint);
+      if(isset($data['response'])) {
+        $this->setToCache($endpoint, $ssn, $data['response']);
+      }
 
-    $this->setToCache($endpoint, $ssn, $data['response']);
-
-    return ($data['response']);
+      return ($data['response']);
+    } catch (GuzzleException|YjdhException $e) {
+      $this->logger->error('YJDH error: ' . $e->getMessage());
+      return [];
+    }
   }
 
   /**
@@ -261,11 +296,12 @@ class YjdhClient {
    *
    * @return array
    *   Response data
-   *
-   * @throws \Drupal\helfi_yjdh\Exception\YjdhException
-   * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  protected function request(array $body, string $endpoint): array {
+  #[ArrayShape([
+    'response' => "mixed",
+    'faultCode' => "mixed",
+    'faultString' => "mixed"
+  ])] protected function request(array $body, string $endpoint): array {
 
     $thisService = $this->selectService($endpoint);
 
@@ -304,10 +340,10 @@ class YjdhClient {
       ];
 
     }
-    catch (\Exception $e) {
-      throw new YjdhException($e->getMessage());
+    catch (\Throwable $e) {
+      $this->logger->error($e->getMessage());
     }
-
+    return [];
   }
 
   /**
