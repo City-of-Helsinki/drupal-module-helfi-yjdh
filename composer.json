@@ -1,0 +1,12 @@
+{
+    "name": "drupal/helfi_yjdh",
+    "type": "drupal-module",
+    "autoload": {
+        "psr-4": {
+            "Drupal\\HelfiYjdh\\": "src/"
+        }
+    },
+    "license": "GPL-2.0-or-later",
+    "minimum-stability": "dev",
+    "require": {}
+}
