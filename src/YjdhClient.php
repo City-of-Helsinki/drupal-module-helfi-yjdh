@@ -214,9 +214,13 @@ class YjdhClient {
     ];
 
     $data = $this->request($body, $endpoint);
-    $this->setToCache($endpoint, $businessId, $data['response']);
 
-    return ($data['response']);
+    if (isset($data['response']) && is_array($data['response'])) {
+      $this->setToCache($endpoint, $businessId, $data['response']);
+      return ($data['response']);
+    }
+
+    return [];
   }
 
   /**
@@ -275,11 +279,13 @@ class YjdhClient {
       $data = $this->request(
         $body,
         $endpoint);
-      if(isset($data['response'])) {
+      if(isset($data['response']) && is_array($data['response'])) {
         $this->setToCache($endpoint, $ssn, $data['response']);
+        return ($data['response']);
       }
+      $this->logger->error('Empty data received from Yrtti');
+      return [];
 
-      return ($data['response']);
     } catch (GuzzleException|YjdhException $e) {
       $this->logger->error('YJDH error: ' . $e->getMessage());
       return [];
