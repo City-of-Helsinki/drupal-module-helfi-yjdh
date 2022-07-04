@@ -10,7 +10,6 @@ use Drupal\Core\TempStore\PrivateTempStoreFactory;
 use Drupal\helfi_yjdh\Exception\YjdhException;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
-use JetBrains\PhpStorm\ArrayShape;
 
 /**
  * Service to use YJDH services.
@@ -78,7 +77,7 @@ class YjdhClient {
   /**
    * The logger channel factory.
    *
-   * @var LoggerChannelInterface
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
    */
   protected LoggerChannelInterface $logger;
 
@@ -201,7 +200,6 @@ class YjdhClient {
    *
    * @return array
    *   Response data
-   *
    */
   public function getAssociationBasicInfo(string $businessId, string $endpoint = '/api/BasicInfo'): array {
 
@@ -233,7 +231,6 @@ class YjdhClient {
    *
    * @return array|null
    *   Response data
-   *
    */
   public function getCompany(string $businessId, string $endpoint = '/api/GetCompany'): ?array {
 
@@ -264,7 +261,6 @@ class YjdhClient {
    *
    * @return array
    *   Response data
-   *
    */
   public function roleSearchWithSsn(string $ssn, string $endpoint = '/api/RoleSearchWithSSN'): array {
     if ($this->isCached($endpoint, $ssn)) {
@@ -279,14 +275,15 @@ class YjdhClient {
       $data = $this->request(
         $body,
         $endpoint);
-      if(isset($data['response']) && is_array($data['response'])) {
+      if (isset($data['response']) && is_array($data['response'])) {
         $this->setToCache($endpoint, $ssn, $data['response']);
         return ($data['response']);
       }
       $this->logger->error('Empty data received from Yrtti');
       return [];
 
-    } catch (GuzzleException|YjdhException $e) {
+    }
+    catch (GuzzleException | YjdhException $e) {
       $this->logger->error('YJDH error: ' . $e->getMessage());
       return [];
     }
@@ -303,16 +300,11 @@ class YjdhClient {
    * @return array
    *   Response data
    */
-  #[ArrayShape([
-    'response' => "mixed",
-    'faultCode' => "mixed",
-    'faultString' => "mixed"
-  ])] protected function request(array $body, string $endpoint): array {
+  protected function request(array $body, string $endpoint): array {
 
     $thisService = $this->selectService($endpoint);
 
     $endExplode = explode('/', $endpoint);
-    $resultName = end($endExplode) . 'Response';
 
     $thisUrl = '';
     $thisAuth = [];
@@ -320,10 +312,12 @@ class YjdhClient {
     if ($thisService == 'ytj') {
       $thisUrl = $this->ytjBaseUrl . $endpoint;
       $thisAuth = $this->ytjAuth;
+      $resultName = end($endExplode) . 'Result';
     }
     if ($thisService == 'yrtti') {
       $thisUrl = $this->yrttiBaseUrl . $endpoint;
       $thisAuth = $this->yrttiAuth;
+      $resultName = end($endExplode) . 'Response';
     }
 
     try {
@@ -340,9 +334,9 @@ class YjdhClient {
 
       // tässä fault code tarkistus.
       return [
-        'response' => $data[$resultName],
-        'faultCode' => $data['faultCode'],
-        'faultString' => $data['faultString'],
+        'response' => $thisService == 'yrtti' ? $data[$resultName] : $data[$resultName]['Company'],
+        'faultCode' => $thisService == 'yrtti' ? $data['faultCode'] : $response->getStatusCode(),
+        'faultString' => $thisService == 'yrtti' ? $data['faultString'] : $response->getReasonPhrase(),
       ];
 
     }
