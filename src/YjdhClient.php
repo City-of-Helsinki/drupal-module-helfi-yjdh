@@ -93,6 +93,10 @@ class YjdhClient {
    *
    * @param \GuzzleHttp\ClientInterface $http_client
    *   The HTTP client.
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   *   The logger channel factory.
+   * @param \Drupal\Core\TempStore\PrivateTempStoreFactory $tempstore
+   *   Access to session storage.
    */
   public function __construct(
     ClientInterface $http_client,
