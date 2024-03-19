@@ -9,5 +9,19 @@
     },
     "license": "GPL-2.0-or-later",
     "minimum-stability": "dev",
-    "require": {}
+    "require": {},
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://repository.drupal.hel.ninja"
+        },
+        {
+            "type": "composer",
+            "url": "https://packages.drupal.org/8"
+        },
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
+        }
+    ]
 }
